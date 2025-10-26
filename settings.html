@@ -51,14 +51,21 @@
     // Check if configured at BOARD level
     Promise.all([
       t.get('board', 'shared', 'togglApiToken'),
-      t.get('board', 'shared', 'togglWorkspaceId')
+      t.get('board', 'shared', 'togglWorkspaceId'),
+      t.get('board', 'shared', 'corsProxyUrl')
     ]).then(function(values) {
       var token = values[0];
       var workspaceId = values[1];
+      var corsProxyUrl = values[2];
       
       if (token && workspaceId) {
-        document.getElementById('statusText').textContent = 
-          'Toggl is configured for this board. Workspace ID: ' + workspaceId;
+        var statusMsg = 'Toggl is configured for this board.<br>Workspace ID: ' + workspaceId;
+        if (corsProxyUrl) {
+          statusMsg += '<br>Proxy: ' + corsProxyUrl.substring(0, 40) + '...';
+        } else {
+          statusMsg += '<br>Proxy: Default';
+        }
+        document.getElementById('statusText').innerHTML = statusMsg;
       } else {
         document.getElementById('statusText').textContent = 
           'Toggl is not configured yet for this board.';
@@ -78,7 +85,7 @@
     
     document.getElementById('clearBtn').addEventListener('click', function() {
       if (confirm('Are you sure you want to clear your Toggl configuration for this entire board?')) {
-        t.remove('board', 'shared', ['togglApiToken', 'togglWorkspaceId'])
+        t.remove('board', 'shared', ['togglApiToken', 'togglWorkspaceId', 'corsProxyUrl'])
           .then(function() {
             return t.alert({
               message: 'Configuration cleared for entire board',

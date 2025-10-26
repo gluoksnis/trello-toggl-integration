@@ -3,52 +3,67 @@
 // Toggl Track API configuration
 var TOGGL_API_URL = 'https://api.track.toggl.com/api/v9';
 
-// CORS Proxy - REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL
-// Example: 'https://toggl-proxy.YOUR-NAME.workers.dev/?url='
-// See FIX_405_ERROR.md for setup instructions
-var CORS_PROXY = 'https://toggl-trello-cors.v-gluoksnis.workers.dev/?url=';
+// Default CORS Proxy - can be overridden in settings
+var DEFAULT_CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
-// NOTE: The cors-anywhere.herokuapp.com proxy will give 405 or 400 errors!
-// You MUST set up your own Cloudflare Worker (2 minutes, free)
-// Instructions in FIX_405_ERROR.md
+// Helper function to get CORS proxy URL (from settings or default)
+function getCorsProxy(t) {
+  return t.get('board', 'shared', 'corsProxyUrl')
+    .then(function(proxyUrl) {
+      if (proxyUrl) {
+        // Make sure it ends with /?url= if it's a Cloudflare Worker style proxy
+        if (proxyUrl.indexOf('workers.dev') !== -1 && proxyUrl.indexOf('?url=') === -1) {
+          return proxyUrl + '/?url=';
+        }
+        return proxyUrl;
+      }
+      return DEFAULT_CORS_PROXY;
+    });
+}
 
 // Helper function to make API calls through proxy
-function makeTogglRequest(endpoint, options, apiToken) {
+function makeTogglRequest(endpoint, options, apiToken, t) {
   // Build the full Toggl URL
   var togglUrl = TOGGL_API_URL + endpoint;
-  // Encode it for the proxy
-  var url = CORS_PROXY + encodeURIComponent(togglUrl);
   
-  console.log('Toggl endpoint:', endpoint);
-  console.log('Full Toggl URL:', togglUrl);
-  console.log('Proxy URL:', url);
-  console.log('Method:', options.method || 'GET');
-  
-  var headers = {
-    'Content-Type': 'application/json',
-    'Authorization': 'Basic ' + btoa(apiToken + ':api_token')
-  };
-  
-  var fetchOptions = {
-    method: options.method || 'GET',
-    headers: headers
-  };
-  
-  if (options.body) {
-    fetchOptions.body = JSON.stringify(options.body);
-    console.log('Request body:', fetchOptions.body);
-  }
-  
-  return fetch(url, fetchOptions)
-    .then(function(response) {
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      return response;
-    })
-    .catch(function(error) {
-      console.error('Fetch error:', error);
-      throw error;
-    });
+  return getCorsProxy(t).then(function(corsProxy) {
+    // Encode it for the proxy
+    var url = corsProxy + encodeURIComponent(togglUrl);
+  return getCorsProxy(t).then(function(corsProxy) {
+    // Encode it for the proxy
+    var url = corsProxy + encodeURIComponent(togglUrl);
+    
+    console.log('Toggl endpoint:', endpoint);
+    console.log('Full Toggl URL:', togglUrl);
+    console.log('Proxy URL:', url);
+    console.log('Method:', options.method || 'GET');
+    
+    var headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Basic ' + btoa(apiToken + ':api_token')
+    };
+    
+    var fetchOptions = {
+      method: options.method || 'GET',
+      headers: headers
+    };
+    
+    if (options.body) {
+      fetchOptions.body = JSON.stringify(options.body);
+      console.log('Request body:', fetchOptions.body);
+    }
+    
+    return fetch(url, fetchOptions)
+      .then(function(response) {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        return response;
+      })
+      .catch(function(error) {
+        console.error('Fetch error:', error);
+        throw error;
+      });
+  });
 }
 
 // Helper function to verify if a timer is still running in Toggl
@@ -56,7 +71,7 @@ function verifyTimerRunning(t, apiToken, timerId) {
   // Get current running timer from Toggl
   return makeTogglRequest('/me/time_entries/current', {
     method: 'GET'
-  }, apiToken)
+  }, apiToken, t)
   .then(function(response) {
     if (!response.ok) {
       console.warn('Could not verify timer status:', response.status);
@@ -284,7 +299,7 @@ function startTimer(t, apiToken) {
     return makeTogglRequest(endpoint, {
       method: 'POST',
       body: timerData
-    }, apiToken)
+    }, apiToken, t)
     .then(function(response) {
       if (!response.ok) {
         return response.text().then(function(text) {
@@ -326,7 +341,7 @@ function startTimer(t, apiToken) {
 function stopTimer(t, apiToken, timerId, workspaceId) {
   return makeTogglRequest('/workspaces/' + workspaceId + '/time_entries/' + timerId + '/stop', {
     method: 'PATCH'
-  }, apiToken)
+  }, apiToken, t)
   .then(function(response) {
     if (!response.ok) {
       throw new Error('Failed to stop timer');

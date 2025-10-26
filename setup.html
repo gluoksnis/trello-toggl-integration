@@ -52,6 +52,10 @@
     <input type="number" id="workspaceId" placeholder="e.g., 1234567" required>
     <div class="help-text">Find in Toggl Track → Settings</div>
     
+    <label for="corsProxyUrl">CORS Proxy URL (optional):</label>
+    <input type="text" id="corsProxyUrl" placeholder="https://your-worker.workers.dev/?url=">
+    <div class="help-text">Your Cloudflare Worker URL. Leave empty to use default.</div>
+    
     <button type="submit" class="mod-primary">Save Configuration</button>
   </form>
 
@@ -64,16 +68,21 @@
     // Load existing settings if any from BOARD level
     Promise.all([
       t.get('board', 'shared', 'togglApiToken'),
-      t.get('board', 'shared', 'togglWorkspaceId')
+      t.get('board', 'shared', 'togglWorkspaceId'),
+      t.get('board', 'shared', 'corsProxyUrl')
     ]).then(function(values) {
       var token = values[0];
       var workspaceId = values[1];
+      var corsProxyUrl = values[2];
       
       if (token) {
         document.getElementById('apiToken').value = token;
       }
       if (workspaceId) {
         document.getElementById('workspaceId').value = workspaceId;
+      }
+      if (corsProxyUrl) {
+        document.getElementById('corsProxyUrl').value = corsProxyUrl;
       }
       
       // Size the popup after content loads
@@ -85,9 +94,10 @@
       
       var apiToken = document.getElementById('apiToken').value.trim();
       var workspaceId = document.getElementById('workspaceId').value.trim();
+      var corsProxyUrl = document.getElementById('corsProxyUrl').value.trim();
       
       if (!apiToken || !workspaceId) {
-        alert('Please fill in both fields');
+        alert('Please fill in both required fields');
         return;
       }
       
@@ -102,11 +112,19 @@
         return;
       }
       
-      // Save to BOARD scope (applies to all cards on this board)
-      t.set('board', 'shared', {
+      // Prepare settings object
+      var settings = {
         togglApiToken: apiToken,
         togglWorkspaceId: workspaceId
-      })
+      };
+      
+      // Add CORS proxy URL if provided
+      if (corsProxyUrl) {
+        settings.corsProxyUrl = corsProxyUrl;
+      }
+      
+      // Save to BOARD scope (applies to all cards on this board)
+      t.set('board', 'shared', settings)
       .then(function() {
         return t.alert({
           message: 'Settings saved for entire board! Try starting a timer.',
