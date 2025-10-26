@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
+  <style>
+    body {
+      padding: 10px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #0079BF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin: 5px 0;
+      border-radius: 3px;
+    }
+    button:hover {
+      background-color: #026aa7;
+    }
+    button.danger {
+      background-color: #cf513d;
+    }
+    button.danger:hover {
+      background-color: #b04632;
+    }
+    .info {
+      font-size: 12px;
+      color: #5e6c84;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div id="settingsContent">
+    <div class="info" id="statusText">Loading...</div>
+    <button id="updateBtn" class="mod-primary">Update Configuration</button>
+    <button id="clearBtn" class="danger">Clear Configuration</button>
+  </div>
+
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <script>
+    /* global TrelloPowerUp */
+    
+    var t = TrelloPowerUp.iframe();
+    
+    // Check if configured
+    Promise.all([
+      t.get('card', 'shared', 'togglApiToken'),
+      t.get('card', 'shared', 'togglWorkspaceId')
+    ]).then(function(values) {
+      var token = values[0];
+      var workspaceId = values[1];
+      
+      if (token && workspaceId) {
+        document.getElementById('statusText').textContent = 
+          'Toggl is configured. Workspace ID: ' + workspaceId;
+      } else {
+        document.getElementById('statusText').textContent = 
+          'Toggl is not configured yet.';
+      }
+      
+      // Size the popup after content loads
+      t.sizeTo('#settingsContent');
+    });
+    
+    document.getElementById('updateBtn').addEventListener('click', function() {
+      t.popup({
+        title: 'Update Toggl Settings',
+        url: './setup.html',
+        height: 250
+      });
+    });
+    
+    document.getElementById('clearBtn').addEventListener('click', function() {
+      if (confirm('Are you sure you want to clear your Toggl configuration?')) {
+        t.remove('card', 'shared', ['togglApiToken', 'togglWorkspaceId'])
+          .then(function() {
+            return t.alert({
+              message: 'Configuration cleared',
+              duration: 3
+            });
+          })
+          .then(function() {
+            return t.closePopup();
+          });
+      }
+    });
+  </script>
+</body>
+</html>
