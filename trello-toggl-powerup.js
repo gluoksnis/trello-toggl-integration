@@ -129,7 +129,16 @@ function startTimer(t, apiToken) {
     })
     .then(function(response) {
       if (!response.ok) {
-        throw new Error('Failed to start timer');
+        return response.text().then(function(text) {
+          console.error('Toggl API error:', response.status, text);
+          if (response.status === 401) {
+            throw new Error('Invalid API token. Please check your token in settings.');
+          } else if (response.status === 403) {
+            throw new Error('Access denied. Check your workspace ID and permissions.');
+          } else {
+            throw new Error('Toggl API error: ' + response.status);
+          }
+        });
       }
       return response.json();
     })
@@ -141,15 +150,15 @@ function startTimer(t, apiToken) {
     })
     .then(function() {
       return t.alert({
-        message: 'Timer started!',
+        message: 'Timer started successfully!',
         duration: 3
       });
     })
     .catch(function(error) {
       console.error('Error starting timer:', error);
       return t.alert({
-        message: 'Failed to start timer. Please check your Toggl settings.',
-        duration: 5
+        message: error.message || 'Failed to start timer. Check console for details.',
+        duration: 8
       });
     });
   });

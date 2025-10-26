@@ -91,36 +91,33 @@
         return;
       }
       
-      // Verify the API token works
-      fetch('https://api.track.toggl.com/api/v9/me', {
-        headers: {
-          'Authorization': 'Basic ' + btoa(apiToken + ':api_token')
-        }
-      })
-      .then(function(response) {
-        if (!response.ok) {
-          throw new Error('Invalid API token');
-        }
-        return response.json();
-      })
-      .then(function(userData) {
-        // Save the settings
-        return t.set('card', 'shared', {
-          togglApiToken: apiToken,
-          togglWorkspaceId: workspaceId
-        });
+      // Basic validation
+      if (apiToken.length < 20) {
+        alert('API token seems too short. Please check you copied the full token.');
+        return;
+      }
+      
+      if (isNaN(workspaceId) || workspaceId.length < 5) {
+        alert('Workspace ID should be a number (e.g., 1234567)');
+        return;
+      }
+      
+      // Save the settings (verification will happen when starting timer)
+      t.set('card', 'shared', {
+        togglApiToken: apiToken,
+        togglWorkspaceId: workspaceId
       })
       .then(function() {
         return t.alert({
-          message: 'Toggl configured successfully!',
-          duration: 3
+          message: 'Settings saved! Try starting a timer to verify.',
+          duration: 4
         });
       })
       .then(function() {
         return t.closePopup();
       })
       .catch(function(error) {
-        alert('Error: ' + error.message + '. Please check your API token and workspace ID.');
+        alert('Error saving settings: ' + error.message);
       });
     });
   </script>
