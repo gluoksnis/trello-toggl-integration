@@ -29,9 +29,6 @@ function makeTogglRequest(endpoint, options, apiToken, t) {
   return getCorsProxy(t).then(function(corsProxy) {
     // Encode it for the proxy
     var url = corsProxy + encodeURIComponent(togglUrl);
-  return getCorsProxy(t).then(function(corsProxy) {
-    // Encode it for the proxy
-    var url = corsProxy + encodeURIComponent(togglUrl);
     
     console.log('Toggl endpoint:', endpoint);
     console.log('Full Toggl URL:', togglUrl);
@@ -108,7 +105,7 @@ TrelloPowerUp.initialize({
               return t.popup({
                 title: 'Configure Toggl',
                 url: './setup.html',
-                height: 250
+                height: 320
               });
             }
           }];
