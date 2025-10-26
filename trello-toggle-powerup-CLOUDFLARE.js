@@ -3,17 +3,18 @@
 // Toggl Track API configuration
 var TOGGL_API_URL = 'https://api.track.toggl.com/api/v9';
 
-// CORS Proxy options
-// Try these in order if one doesn't work:
-var CORS_PROXY = 'https://toggl-trello-cors.v-gluoksnis.workers.dev/';
-// Alternate: var CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// CORS Proxy - REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL
+// Example: 'https://toggl-proxy.YOUR-NAME.workers.dev/?url='
+var CORS_PROXY = 'YOUR_CLOUDFLARE_WORKER_URL_HERE/?url=';
 
 // Helper function to make API calls through proxy
 function makeTogglRequest(endpoint, options, apiToken) {
-  var url = CORS_PROXY + encodeURIComponent(TOGGL_API_URL + endpoint);
+  // Encode the full Toggl URL for the proxy
+  var togglUrl = TOGGL_API_URL + endpoint;
+  var url = CORS_PROXY + encodeURIComponent(togglUrl);
   
-  console.log('Making request to:', url);
-  console.log('Method:', options.method || 'GET');
+  console.log('Making request to Toggl:', endpoint);
+  console.log('Via proxy:', url);
   
   var headers = {
     'Content-Type': 'application/json',
@@ -33,7 +34,9 @@ function makeTogglRequest(endpoint, options, apiToken) {
   return fetch(url, fetchOptions)
     .then(function(response) {
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
+      }
       return response;
     })
     .catch(function(error) {
@@ -170,6 +173,8 @@ function startTimer(t, apiToken) {
             throw new Error('Invalid API token. Please check your token in settings.');
           } else if (response.status === 403) {
             throw new Error('Access denied. Check your workspace ID and permissions.');
+          } else if (response.status === 405) {
+            throw new Error('Proxy error (405). Please set up your Cloudflare Worker - see FIX_405_ERROR.md');
           } else {
             throw new Error('Toggl API error: ' + response.status);
           }
