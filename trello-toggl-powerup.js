@@ -3,10 +3,44 @@
 // Toggl Track API configuration
 var TOGGL_API_URL = 'https://api.track.toggl.com/api/v9';
 
+// CORS Proxy - Use this to bypass CORS restrictions
+// Option 1: Use CORS Anywhere (public, may be rate limited)
+var CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
+// Option 2: Deploy your own proxy (recommended for production)
+// See PROXY_SETUP.md for instructions
+
+// Helper function to make API calls through proxy
+function makeTogglRequest(endpoint, options, apiToken) {
+  var url = CORS_PROXY + TOGGL_API_URL + endpoint;
+  
+  var headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Basic ' + btoa(apiToken + ':api_token')
+  };
+  
+  // Merge with any additional headers
+  if (options.headers) {
+    for (var key in options.headers) {
+      headers[key] = options.headers[key];
+    }
+  }
+  
+  var fetchOptions = {
+    method: options.method || 'GET',
+    headers: headers
+  };
+  
+  if (options.body) {
+    fetchOptions.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+  }
+  
+  return fetch(url, fetchOptions);
+}
+
 // Initialize the Power-Up
 TrelloPowerUp.initialize({
   'card-buttons': function(t, options) {
-    return t.get('card', 'shared', 'togglApiToken')
+    return t.get('board', 'shared', 'togglApiToken')
       .then(function(apiToken) {
         if (!apiToken) {
           return [{
@@ -30,7 +64,7 @@ TrelloPowerUp.initialize({
                 icon: 'https://raw.githubusercontent.com/toggl/toggl_api_docs/master/public/favicon.ico',
                 text: 'Stop Timer',
                 callback: function(t) {
-                  return t.get('card', 'shared', 'togglWorkspaceId')
+                  return t.get('board', 'shared', 'togglWorkspaceId')
                     .then(function(workspaceId) {
                       return stopTimer(t, apiToken, timerId, workspaceId);
                     });
@@ -106,7 +140,7 @@ function startTimer(t, apiToken) {
   return Promise.all([
     t.card('name'),
     t.board('name'),
-    t.get('card', 'shared', 'togglWorkspaceId')
+    t.get('board', 'shared', 'togglWorkspaceId')
   ]).then(function(values) {
     var card = values[0];
     var board = values[1];
@@ -119,14 +153,10 @@ function startTimer(t, apiToken) {
       tags: ['trello', board.name]
     };
     
-    return fetch(TOGGL_API_URL + '/me/time_entries', {
+    return makeTogglRequest('/me/time_entries', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + btoa(apiToken + ':api_token')
-      },
-      body: JSON.stringify(timerData)
-    })
+      body: timerData
+    }, apiToken)
     .then(function(response) {
       if (!response.ok) {
         return response.text().then(function(text) {
@@ -166,13 +196,9 @@ function startTimer(t, apiToken) {
 
 // Stop the running timer
 function stopTimer(t, apiToken, timerId, workspaceId) {
-  return fetch(TOGGL_API_URL + '/workspaces/' + workspaceId + '/time_entries/' + timerId + '/stop', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Basic ' + btoa(apiToken + ':api_token')
-    }
-  })
+  return makeTogglRequest('/workspaces/' + workspaceId + '/time_entries/' + timerId + '/stop', {
+    method: 'PATCH'
+  }, apiToken)
   .then(function(response) {
     if (!response.ok) {
       throw new Error('Failed to stop timer');

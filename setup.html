@@ -61,10 +61,10 @@
     
     var t = TrelloPowerUp.iframe();
     
-    // Load existing settings if any
+    // Load existing settings if any from BOARD level
     Promise.all([
-      t.get('card', 'shared', 'togglApiToken'),
-      t.get('card', 'shared', 'togglWorkspaceId')
+      t.get('board', 'shared', 'togglApiToken'),
+      t.get('board', 'shared', 'togglWorkspaceId')
     ]).then(function(values) {
       var token = values[0];
       var workspaceId = values[1];
@@ -102,14 +102,14 @@
         return;
       }
       
-      // Save the settings (verification will happen when starting timer)
-      t.set('card', 'shared', {
+      // Save to BOARD scope (applies to all cards on this board)
+      t.set('board', 'shared', {
         togglApiToken: apiToken,
         togglWorkspaceId: workspaceId
       })
       .then(function() {
         return t.alert({
-          message: 'Settings saved! Try starting a timer to verify.',
+          message: 'Settings saved for entire board! Try starting a timer.',
           duration: 4
         });
       })

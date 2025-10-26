@@ -2,6 +2,15 @@
 
 A custom Trello Power-Up that integrates Toggl Track time tracking directly into your Trello cards. Start and stop timers without leaving Trello!
 
+## ⚠️ Important: CORS Proxy Required
+
+**Toggl's API blocks direct browser requests** due to CORS restrictions. The Power-Up includes a default proxy (`cors-anywhere.herokuapp.com`) for quick testing, but you'll need to:
+
+1. **For testing:** Visit https://cors-anywhere.herokuapp.com/corsdemo and request access (resets daily)
+2. **For production:** Set up your own free proxy (5 minutes) - see **[PROXY_SETUP.md](PROXY_SETUP.md)** 
+
+**Recommended:** Use Cloudflare Workers (free, 5-minute setup)
+
 ## ⚠️ Important Note About Hosting
 
 **Glitch is no longer available** for hosting (as of July 2025). Use one of these alternatives instead:
@@ -138,22 +147,30 @@ After creating your Power-Up:
 
 ## Using the Power-Up
 
-### First Time Setup (Per Card)
+### First Time Setup (Once Per Board)
 
-The first time you use the Power-Up on a card:
+Configure Toggl once for the entire board:
 
-1. **Open a card**
+1. **Open any card** on the board
 2. Look for **"Setup Toggl"** button in the Power-Ups section
 3. Click it and enter:
    - Your Toggl API token
    - Your Workspace ID
 4. Click **"Save Configuration"**
 
-This only needs to be done once per card (settings are shared across the card).
+**That's it!** Now you can start timers from ANY card on this board.
+
+### Alternative: Configure from Board Settings
+
+You can also configure from the Power-Up settings:
+1. Board menu → **Power-Ups**
+2. Find **"Toggl Track Timer"**
+3. Click the gear icon → **Settings**
+4. Enter your credentials
 
 ### Starting a Timer
 
-1. **Open a card**
+1. **Open any card** on the configured board
 2. Click **"Start Timer"** button
 3. A timer starts in Toggl with:
    - Description: Card name
@@ -172,6 +189,15 @@ This only needs to be done once per card (settings are shared across the card).
 - **Total Time**: Blue badge showing total time tracked (Xh Ym)
 
 ## Troubleshooting
+
+### Problem: "Card scope not available without card context" error
+
+**This has been fixed!** The Power-Up now uses board-level configuration.
+
+If you still see this error with the updated code:
+- Make sure you're using the latest version of all files
+- Clear your browser cache
+- Hard refresh Trello (Ctrl+F5)
 
 ### Problem: Power-Up doesn't show up after enabling
 

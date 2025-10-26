@@ -1,0 +1,157 @@
+# Deployment Checklist ✅
+
+## Files to Upload to GitHub Pages
+
+Upload these 4 files to your repository:
+
+- [ ] `index.html` (connector file)
+- [ ] `trello-toggl-powerup.js` (main logic - **UPDATED for board-level**)
+- [ ] `setup.html` (configuration popup - **UPDATED for board-level**)
+- [ ] `settings.html` (settings popup - **UPDATED for board-level**)
+
+## Before You Start
+
+- [ ] You have a GitHub account
+- [ ] You have a GitHub repository (public)
+- [ ] GitHub Pages is enabled on your repository
+- [ ] You have your Toggl API token
+- [ ] You have your Toggl workspace ID
+
+## Step 1: CORS Proxy (Required!)
+
+Choose one:
+
+### Option A: Quick Test (1 minute)
+- [ ] Visit https://cors-anywhere.herokuapp.com/corsdemo
+- [ ] Click "Request temporary access to the demo server"
+- [ ] Continue to Step 2
+
+### Option B: Production Setup (5 minutes)
+- [ ] Set up Cloudflare Worker (see PROXY_SETUP.md)
+- [ ] Update `CORS_PROXY` variable in trello-toggl-powerup.js
+- [ ] Continue to Step 2
+
+## Step 2: Upload Files
+
+- [ ] Upload all 4 files to your GitHub repository
+- [ ] Wait 1-2 minutes for GitHub Pages to deploy
+- [ ] Test that files are accessible:
+  - [ ] Visit `https://YOUR-USERNAME.github.io/REPO-NAME/index.html`
+  - [ ] Should load without errors
+
+## Step 3: Create Trello Power-Up
+
+- [ ] Go to https://trello.com/power-ups/admin
+- [ ] Select your workspace
+- [ ] Click "New"
+- [ ] Fill in the form:
+  - [ ] **Name**: Toggl Track Timer
+  - [ ] **Iframe Connector URL**: `https://YOUR-USERNAME.github.io/REPO-NAME/index.html`
+  - [ ] **Author**: Your name (optional)
+  - [ ] **Support Contact**: Your email (optional)
+- [ ] Click "Create"
+
+## Step 4: Enable Capabilities
+
+In the Power-Up admin:
+
+- [ ] Go to "Capabilities" tab
+- [ ] Enable these three:
+  - [ ] `card-buttons`
+  - [ ] `card-badges`
+  - [ ] `show-settings`
+- [ ] Click "Save"
+
+## Step 5: Add to a Board
+
+- [ ] Open a Trello board
+- [ ] Board menu → Power-Ups
+- [ ] Find your Power-Up (under "Custom" tab)
+- [ ] Click "Add"
+
+## Step 6: Configure Toggl
+
+- [ ] Open any card on the board
+- [ ] Look for "Setup Toggl" button in Power-Ups section
+- [ ] Click it
+- [ ] Enter your Toggl API token
+- [ ] Enter your workspace ID
+- [ ] Click "Save Configuration"
+- [ ] Should see: "Settings saved for entire board!"
+
+## Step 7: Test
+
+- [ ] Open the same card
+- [ ] Click "Start Timer"
+- [ ] Should see: "Timer started successfully!"
+- [ ] Open Toggl Track in another tab
+- [ ] Verify timer is running with the card title
+
+## Step 8: Test on Different Card
+
+- [ ] Open a **different card** on the same board
+- [ ] Click "Start Timer" (no setup needed!)
+- [ ] Should work immediately
+- [ ] Check Toggl - new timer with new card title
+
+## Troubleshooting
+
+If something doesn't work:
+
+### "Failed to fetch" error
+- [ ] Did you enable CORS proxy access? (Step 1)
+- [ ] Check browser console (F12) for detailed errors
+
+### "Setup Toggl" button doesn't appear
+- [ ] Hard refresh Trello (Ctrl+F5 or Cmd+Shift+R)
+- [ ] Check iframe connector URL is correct and ends with `/index.html`
+- [ ] Verify all 4 files are uploaded to GitHub Pages
+
+### "Card scope not available" error
+- [ ] You're using old files - upload the new ones!
+- [ ] Hard refresh Trello after uploading
+
+### Power-Up doesn't show up
+- [ ] Check you enabled it on the specific board
+- [ ] Verify you're in the same workspace where you created the Power-Up
+- [ ] Try disabling and re-enabling the Power-Up
+
+### Timer doesn't appear in Toggl
+- [ ] Check API token is correct (32 characters)
+- [ ] Verify workspace ID is just numbers
+- [ ] Look in Toggl Track → Time Entries
+
+## Success Criteria
+
+You know it's working when:
+
+✅ You can configure once and it works on all cards
+✅ "Start Timer" appears on every card without setup
+✅ Timers start with the card title as description
+✅ Timers appear in Toggl Track immediately
+✅ Running timer badge shows on the card
+✅ You can stop timers from any card
+
+## Documentation
+
+Reference these files for help:
+
+- **README.md** - Full documentation
+- **WHATS_NEW.md** - What changed in this version
+- **QUICK_FIX.md** - CORS proxy quick fix
+- **PROXY_SETUP.md** - Set up your own proxy
+- **TROUBLESHOOTING.md** - Common issues
+- **BOARD_LEVEL_UPDATE.md** - Migration from old version
+
+## Quick Links
+
+- Trello Power-Up Admin: https://trello.com/power-ups/admin
+- Toggl API Token: https://track.toggl.com/profile
+- CORS Proxy Demo: https://cors-anywhere.herokuapp.com/corsdemo
+- Cloudflare Workers: https://workers.cloudflare.com/
+
+---
+
+🎉 **That's it!** You now have a fully functional Trello-Toggl integration with board-level configuration.
+
+Happy time tracking! ⏱️
