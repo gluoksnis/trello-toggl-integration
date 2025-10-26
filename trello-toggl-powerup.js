@@ -51,6 +51,35 @@ function makeTogglRequest(endpoint, options, apiToken) {
     });
 }
 
+// Helper function to verify if a timer is still running in Toggl
+function verifyTimerRunning(t, apiToken, timerId) {
+  // Get current running timer from Toggl
+  return makeTogglRequest('/me/time_entries/current', {
+    method: 'GET'
+  }, apiToken)
+  .then(function(response) {
+    if (!response.ok) {
+      console.warn('Could not verify timer status:', response.status);
+      // If we can't verify, assume it's still running to avoid false positives
+      return true;
+    }
+    return response.json();
+  })
+  .then(function(data) {
+    // If there's a current timer and it matches our ID, it's running
+    if (data && data.id && data.id.toString() === timerId.toString()) {
+      return true;
+    }
+    // No current timer or different timer - our timer is not running
+    return false;
+  })
+  .catch(function(error) {
+    console.error('Error verifying timer:', error);
+    // On error, assume still running to avoid false positives
+    return true;
+  });
+}
+
 // Initialize the Power-Up
 TrelloPowerUp.initialize({
   'card-buttons': function(t, options) {
@@ -74,16 +103,36 @@ TrelloPowerUp.initialize({
         return t.get('card', 'private', 'runningTimerId')
           .then(function(timerId) {
             if (timerId) {
-              return [{
-                icon: 'https://raw.githubusercontent.com/toggl/toggl_api_docs/master/public/favicon.ico',
-                text: 'Stop Timer',
-                callback: function(t) {
-                  return t.get('board', 'shared', 'togglWorkspaceId')
-                    .then(function(workspaceId) {
-                      return stopTimer(t, apiToken, timerId, workspaceId);
-                    });
-                }
-              }];
+              // Verify the timer is still running in Toggl
+              return verifyTimerRunning(t, apiToken, timerId)
+                .then(function(isRunning) {
+                  if (!isRunning) {
+                    // Timer was stopped in Toggl, clean up local state
+                    return t.remove('card', 'private', ['runningTimerId', 'timerStartTime'])
+                      .then(function() {
+                        // Show Start button instead
+                        return [{
+                          icon: 'https://raw.githubusercontent.com/toggl/toggl_api_docs/master/public/favicon.ico',
+                          text: 'Start Timer',
+                          callback: function(t) {
+                            return startTimer(t, apiToken);
+                          }
+                        }];
+                      });
+                  }
+                  
+                  // Timer is still running, show Stop button
+                  return [{
+                    icon: 'https://raw.githubusercontent.com/toggl/toggl_api_docs/master/public/favicon.ico',
+                    text: 'Stop Timer',
+                    callback: function(t) {
+                      return t.get('board', 'shared', 'togglWorkspaceId')
+                        .then(function(workspaceId) {
+                          return stopTimer(t, apiToken, timerId, workspaceId);
+                        });
+                    }
+                  }];
+                });
             } else {
               return [{
                 icon: 'https://raw.githubusercontent.com/toggl/toggl_api_docs/master/public/favicon.ico',
@@ -98,46 +147,102 @@ TrelloPowerUp.initialize({
   },
   
   'card-badges': function(t, options) {
-    return t.get('card', 'private', 'runningTimerId')
-      .then(function(timerId) {
-        if (timerId) {
-          return t.get('card', 'private', 'timerStartTime')
-            .then(function(startTime) {
-              var elapsed = Math.floor((Date.now() - startTime) / 1000);
-              var hours = Math.floor(elapsed / 3600);
-              var minutes = Math.floor((elapsed % 3600) / 60);
-              var seconds = elapsed % 60;
-              
-              var hoursStr = hours.toString();
-              if (hoursStr.length < 2) hoursStr = '0' + hoursStr;
-              var minutesStr = minutes.toString();
-              if (minutesStr.length < 2) minutesStr = '0' + minutesStr;
-              var secondsStr = seconds.toString();
-              if (secondsStr.length < 2) secondsStr = '0' + secondsStr;
-              
-              return [{
-                text: hoursStr + ':' + minutesStr + ':' + secondsStr,
-                color: 'red',
-                refresh: 30
-              }];
-            });
-        }
-        
-        // Show total time tracked
-        return t.get('card', 'shared', 'totalTimeTracked')
-          .then(function(totalTime) {
-            if (totalTime && totalTime > 0) {
-              var hours = Math.floor(totalTime / 3600);
-              var minutes = Math.floor((totalTime % 3600) / 60);
-              
-              return [{
-                text: hours + 'h ' + minutes + 'm',
-                color: 'blue'
-              }];
+    return Promise.all([
+      t.get('card', 'private', 'runningTimerId'),
+      t.get('board', 'shared', 'togglApiToken')
+    ]).then(function(values) {
+      var timerId = values[0];
+      var apiToken = values[1];
+      
+      if (timerId && apiToken) {
+        // Verify timer is still running in Toggl
+        return verifyTimerRunning(t, apiToken, timerId)
+          .then(function(isRunning) {
+            if (!isRunning) {
+              // Timer stopped in Toggl, clean up
+              return t.remove('card', 'private', ['runningTimerId', 'timerStartTime'])
+                .then(function() {
+                  // Show total time instead
+                  return t.get('card', 'shared', 'totalTimeTracked')
+                    .then(function(totalTime) {
+                      if (totalTime && totalTime > 0) {
+                        var hours = Math.floor(totalTime / 3600);
+                        var minutes = Math.floor((totalTime % 3600) / 60);
+                        return [{
+                          text: hours + 'h ' + minutes + 'm',
+                          color: 'blue'
+                        }];
+                      }
+                      return [];
+                    });
+                });
             }
-            return [];
+            
+            // Timer is running, show live badge
+            return t.get('card', 'private', 'timerStartTime')
+              .then(function(startTime) {
+                var elapsed = Math.floor((Date.now() - startTime) / 1000);
+                var hours = Math.floor(elapsed / 3600);
+                var minutes = Math.floor((elapsed % 3600) / 60);
+                var seconds = elapsed % 60;
+                
+                var hoursStr = hours.toString();
+                if (hoursStr.length < 2) hoursStr = '0' + hoursStr;
+                var minutesStr = minutes.toString();
+                if (minutesStr.length < 2) minutesStr = '0' + minutesStr;
+                var secondsStr = seconds.toString();
+                if (secondsStr.length < 2) secondsStr = '0' + secondsStr;
+                
+                return [{
+                  text: hoursStr + ':' + minutesStr + ':' + secondsStr,
+                  color: 'red',
+                  refresh: 10 // Refresh every 10 seconds for smoother updates
+                }];
+              });
+          })
+          .catch(function(error) {
+            console.error('Error checking timer:', error);
+            // On error, still show the badge but maybe it's outdated
+            return t.get('card', 'private', 'timerStartTime')
+              .then(function(startTime) {
+                if (!startTime) return [];
+                
+                var elapsed = Math.floor((Date.now() - startTime) / 1000);
+                var hours = Math.floor(elapsed / 3600);
+                var minutes = Math.floor((elapsed % 3600) / 60);
+                var seconds = elapsed % 60;
+                
+                var hoursStr = hours.toString();
+                if (hoursStr.length < 2) hoursStr = '0' + hoursStr;
+                var minutesStr = minutes.toString();
+                if (minutesStr.length < 2) minutesStr = '0' + minutesStr;
+                var secondsStr = seconds.toString();
+                if (secondsStr.length < 2) secondsStr = '0' + secondsStr;
+                
+                return [{
+                  text: hoursStr + ':' + minutesStr + ':' + secondsStr,
+                  color: 'red',
+                  refresh: 10
+                }];
+              });
           });
-      });
+      }
+      
+      // No running timer, show total time tracked
+      return t.get('card', 'shared', 'totalTimeTracked')
+        .then(function(totalTime) {
+          if (totalTime && totalTime > 0) {
+            var hours = Math.floor(totalTime / 3600);
+            var minutes = Math.floor((totalTime % 3600) / 60);
+            
+            return [{
+              text: hours + 'h ' + minutes + 'm',
+              color: 'blue'
+            }];
+          }
+          return [];
+        });
+    });
   },
   
   'show-settings': function(t, options) {
