@@ -160,14 +160,23 @@ function startTimer(t, apiToken) {
     var board = values[1];
     var workspaceId = values[2];
     
+    // Toggl API v9 requires ISO timestamp for start and duration -1 for running timer
+    var now = new Date().toISOString();
+    
     var timerData = {
       description: card.name,
       workspace_id: parseInt(workspaceId),
       created_with: 'Trello Power-Up',
-      tags: ['trello', board.name]
+      tags: ['trello', board.name],
+      start: now,
+      duration: -1,  // Negative duration means timer is running
+      stop: null
     };
     
-    return makeTogglRequest('/me/time_entries', {
+    // Use correct v9 endpoint: /workspaces/{workspace_id}/time_entries
+    var endpoint = '/workspaces/' + workspaceId + '/time_entries';
+    
+    return makeTogglRequest(endpoint, {
       method: 'POST',
       body: timerData
     }, apiToken)
@@ -180,7 +189,7 @@ function startTimer(t, apiToken) {
           } else if (response.status === 403) {
             throw new Error('Access denied. Check your workspace ID and permissions.');
           } else {
-            throw new Error('Toggl API error: ' + response.status);
+            throw new Error('Toggl API error: ' + response.status + ': ' + text);
           }
         });
       }
